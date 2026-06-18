@@ -3,6 +3,8 @@ import os
 import json
 import re
 import time
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from collections import defaultdict, deque
 from datetime import timedelta
 
@@ -14,6 +16,27 @@ from playwright.async_api import async_playwright, TimeoutError as PlaywrightTim
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
+
+
+# --- Keep-alive web server (so Render's free Web Service detects an open port) ---
+def _run_web_server():
+    port = int(os.getenv("PORT", "10000"))
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"Bot is alive")
+
+        def log_message(self, *args):
+            pass  # keep logs quiet
+
+    HTTPServer(("0.0.0.0", port), Handler).serve_forever()
+
+
+def keep_alive():
+    threading.Thread(target=_run_web_server, daemon=True).start()
+
 
 WARNINGS_FILE = "warnings.json"
 WARN_LIMIT = 3           # warns before auto-mute kicks in
@@ -606,4 +629,5 @@ async def unban_error(ctx, error):
 if not TOKEN:
     raise RuntimeError("DISCORD_TOKEN not set. Put it in a .env file next to this script (see .env.example).")
 
+keep_alive()
 bot.run(TOKEN)
