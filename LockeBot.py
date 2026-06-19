@@ -18,7 +18,6 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 
-# --- Keep-alive web server (so Render's free Web Service detects an open port) ---
 def _run_web_server():
     port = int(os.getenv("PORT", "10000"))
 
@@ -29,7 +28,7 @@ def _run_web_server():
             self.wfile.write(b"Bot is alive")
 
         def log_message(self, *args):
-            pass  # keep logs quiet
+            pass
 
     HTTPServer(("0.0.0.0", port), Handler).serve_forever()
 
@@ -39,12 +38,12 @@ def keep_alive():
 
 
 WARNINGS_FILE = "warnings.json"
-WARN_LIMIT = 3           # warns before auto-mute kicks in
-AUTO_MUTE_MINUTES = 10   # default mute length
+WARN_LIMIT = 3
+AUTO_MUTE_MINUTES = 10
 
-SPAM_MESSAGE_LIMIT = 5      # messages allowed...
-SPAM_INTERVAL_SECONDS = 5   # ...within this many seconds
-SPAM_MUTE_SECONDS = 30      # timeout length when spam is detected
+SPAM_MESSAGE_LIMIT = 5
+SPAM_INTERVAL_SECONDS = 5
+SPAM_MUTE_SECONDS = 30
 
 BOT_VERSION = "1.0"
 
@@ -108,7 +107,7 @@ def normalize_champ_name(name):
 
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True  # needed to resolve @mentions to members for warn/mute
+intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -175,17 +174,15 @@ async def log_mod_action(guild, title, description, color=discord.Color.blurple(
         pass
 
 
-message_times = defaultdict(deque)  # (guild_id, user_id) -> recent message timestamps
-spam_last_action = {}                # (guild_id, user_id) -> time of last anti-spam action
+message_times = defaultdict(deque)
+spam_last_action = {}
 
 
-# When bot is ready
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user} — Locke's nails are sharpened and ready ⚰️")
 
 
-# Anti-spam: rate-limit messages per member, mods are exempt
 @bot.event
 async def on_message(message):
     if message.author.bot or message.guild is None:
@@ -234,13 +231,11 @@ async def on_message(message):
     await bot.process_commands(message)
 
 
-# Ping command
 @bot.command()
 async def ping(ctx):
     await ctx.send(f"Pong! 🏓 {round(bot.latency * 1000)}ms")
 
 
-# Hello command
 @bot.command()
 async def hello(ctx):
     await ctx.send(f"Hello {ctx.author.mention} 👋")
@@ -267,13 +262,11 @@ COMMAND_LIST = (
 )
 
 
-# Help command
 @bot.command()
 async def helpme(ctx):
     await ctx.send(f"**Commands:**\n{COMMAND_LIST}")
 
 
-# Info command
 @bot.command()
 async def info(ctx):
     await ctx.send(
@@ -285,7 +278,6 @@ async def info(ctx):
     )
 
 
-# Set the moderation log channel
 @bot.command(name="setmodlog")
 @commands.has_permissions(manage_guild=True)
 async def setmodlog(ctx, channel: discord.TextChannel):
@@ -301,7 +293,6 @@ async def setmodlog_error(ctx, error):
         await ctx.send("Usage: !setmodlog #channel")
 
 
-# Patch notes command (scrapes the latest link from Riot's patch notes listing page)
 @bot.command()
 async def patchnotes(ctx):
     try:
@@ -324,7 +315,6 @@ async def patchnotes(ctx):
     await ctx.send(f"🩸 Latest patch notes:\n{url}")
 
 
-# Champion lookup command (pulls live data from Riot's Data Dragon)
 @bot.command(name="champion", aliases=["champ"])
 async def champion(ctx, *, name: str):
     try:
@@ -377,7 +367,6 @@ async def champion_error(ctx, error):
         await ctx.send("Usage: !champion <name>")
 
 
-# Highest-built item build command (scrapes the rendered OP.GG build page)
 @bot.command(name="champbuild", aliases=["build"])
 @commands.cooldown(1, 10, commands.BucketType.user)
 async def champbuild(ctx, *, name: str):
@@ -434,7 +423,6 @@ async def champbuild_error(ctx, error):
         await ctx.send(f"⏳ Slow down — try again in {error.retry_after:.1f}s.")
 
 
-# Clear messages command
 @bot.command()
 @commands.has_permissions(manage_messages=True)
 async def clear(ctx, amount: int):
@@ -448,7 +436,6 @@ async def clear_error(ctx, error):
         await ctx.send("You don't have permission to do that ❌")
 
 
-# Warn command
 @bot.command()
 @commands.has_permissions(moderate_members=True)
 async def warn(ctx, member: discord.Member, *, reason: str = "No reason given"):
@@ -485,7 +472,6 @@ async def warn_error(ctx, error):
         await ctx.send("Couldn't find that member.")
 
 
-# Check warnings
 @bot.command()
 async def warnings(ctx, member: discord.Member = None):
     member = member or ctx.author
@@ -493,7 +479,6 @@ async def warnings(ctx, member: discord.Member = None):
     await ctx.send(f"{member.mention} has {count} warning(s).")
 
 
-# Reset warnings
 @bot.command()
 @commands.has_permissions(moderate_members=True)
 async def clearwarns(ctx, member: discord.Member):
@@ -508,7 +493,6 @@ async def clearwarns_error(ctx, error):
         await ctx.send("You don't have permission to do that ❌")
 
 
-# Mute command (Discord timeout)
 @bot.command()
 @commands.has_permissions(moderate_members=True)
 async def mute(ctx, member: discord.Member, minutes: int = AUTO_MUTE_MINUTES, *, reason: str = "No reason given"):
@@ -533,7 +517,6 @@ async def mute_error(ctx, error):
         await ctx.send("Couldn't find that member.")
 
 
-# Unmute command
 @bot.command()
 @commands.has_permissions(moderate_members=True)
 async def unmute(ctx, member: discord.Member):
@@ -553,7 +536,6 @@ async def unmute_error(ctx, error):
         await ctx.send("Couldn't find that member.")
 
 
-# Kick command
 @bot.command()
 @commands.has_permissions(kick_members=True)
 async def kick(ctx, member: discord.Member, *, reason: str = "No reason given"):
@@ -578,7 +560,6 @@ async def kick_error(ctx, error):
         await ctx.send("Couldn't find that member.")
 
 
-# Ban command
 @bot.command()
 @commands.has_permissions(ban_members=True)
 async def ban(ctx, member: discord.Member, *, reason: str = "No reason given"):
@@ -603,7 +584,6 @@ async def ban_error(ctx, error):
         await ctx.send("Couldn't find that member.")
 
 
-# Unban command (banned users aren't members anymore, so this takes a user ID)
 @bot.command()
 @commands.has_permissions(ban_members=True)
 async def unban(ctx, user_id: int, *, reason: str = "No reason given"):
