@@ -2,6 +2,8 @@ import asyncio
 import os
 import json
 import re
+import subprocess
+import sys
 import time
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -81,6 +83,13 @@ BLOCKED_RESOURCE_TYPES = {"image", "media", "font", "stylesheet"}
 
 _browser_lock = asyncio.Lock()
 _browser = None
+
+
+def ensure_browser_installed():
+    try:
+        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Playwright browser install failed: {e!r}")
 
 
 async def get_browser():
@@ -391,7 +400,8 @@ async def champbuild(ctx, *, name: str):
                 sections = await page.evaluate(OPGG_BUILD_TABLE_JS)
             finally:
                 await page.close()
-        except Exception:
+        except Exception as e:
+            print(f"champbuild error: {e!r}")
             await ctx.send("Couldn't reach OP.GG right now, try again later.")
             return
 
@@ -609,5 +619,6 @@ async def unban_error(ctx, error):
 if not TOKEN:
     raise RuntimeError("DISCORD_TOKEN not set. Put it in a .env file next to this script (see .env.example).")
 
+ensure_browser_installed()
 keep_alive()
 bot.run(TOKEN)
